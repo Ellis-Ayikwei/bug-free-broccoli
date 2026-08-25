@@ -1,0 +1,16 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Pledge {
+  id             String   @id @default(cuid())
+  amount         Int
+  email          String
+  phone          String
+  licenseDetails String?
+  createdAt      DateTime @default(now())
+}
