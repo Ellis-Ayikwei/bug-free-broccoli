@@ -64,6 +64,12 @@ npx prisma migrate dev     # create/apply migrations during development
 npx prisma studio          # browse the data in a GUI
 ```
 
+**Important:** `prisma migrate deploy` only understands `file:`/`postgresql:`/etc.
+URLs, it can't parse a `libsql://` URL, so it cannot be used to apply migrations
+to Turso directly (running it against a Turso `DATABASE_URL` fails with
+`P1013: The provided database string is invalid`). Schema changes have to be
+applied to Turso by hand, see below.
+
 ## Deployment (Vercel + Turso)
 
 The app deploys cleanly to Vercel (it's a stock Next.js app), but Vercel's
@@ -73,8 +79,12 @@ is a drop-in swap since the schema and adapter already speak libSQL:
 
 1. Create a database: `turso db create pledge-site` (via the [Turso CLI](https://docs.turso.tech/cli/installation))
 2. Get the connection details: `turso db show pledge-site --url` and `turso db tokens create pledge-site`
-3. Apply the schema to it: `DATABASE_URL="libsql://..." TURSO_AUTH_TOKEN="..." npx prisma migrate deploy`
-4. In Vercel's project settings, set `DATABASE_URL`, `TURSO_AUTH_TOKEN`, `ADMIN_PASSWORD`, `ADMIN_SECRET`, and (optionally) `RESEND_API_KEY` / `EMAIL_FROM` / `NEXT_PUBLIC_SITE_NAME`
+3. Apply the schema by running the migration SQL directly against it (not `prisma migrate deploy`, see above):
+   ```bash
+   turso db shell pledge-site < prisma/migrations/<timestamp>_init/migration.sql
+   ```
+   Repeat for any new migration file whenever the schema changes.
+4. In Vercel's project settings, set `DATABASE_URL`, `TURSO_AUTH_TOKEN`, `ADMIN_PASSWORD`, `ADMIN_SECRET`, and (optionally) `RESEND_API_KEY` / `EMAIL_FROM` / `NEXT_PUBLIC_SITE_NAME`. Double-check they're checked for every environment (Production/Preview) you actually deploy to, and that saving them is followed by a redeploy (Vercel doesn't retroactively apply env var changes to an existing deployment).
 5. Deploy
 
 No code changes needed between environments, only which `DATABASE_URL` /
